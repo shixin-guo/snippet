@@ -2,6 +2,13 @@ import * as vscode from "vscode";
 import Snipp from "../interfaces/snipp";
 import editTerminalSnippWebviewContent from "../components/edit_terminal_snipp";
 
+export interface TerminalActionItem {
+  label: string;
+  command: string;
+  icon: string;
+  snipp: Snipp;
+}
+
 export class TerminalSnippModel {
   constructor(
     readonly view: string,
@@ -21,7 +28,7 @@ export class TerminalSnippModel {
 }
 
 export class TerminalSnippProvider
-  implements vscode.TreeDataProvider<Snipp>, vscode.TextDocumentContentProvider
+  implements vscode.TreeDataProvider<Snipp | TerminalActionItem>, vscode.TextDocumentContentProvider
 {
   private _onDidChangeTreeData: vscode.EventEmitter<any> =
     new vscode.EventEmitter<any>();
@@ -37,23 +44,83 @@ export class TerminalSnippProvider
     this._onDidChangeTreeData.fire(null);
   }
 
-  public getTreeItem(element: Snipp): vscode.TreeItem {
-    const t = element.name;
+  public getTreeItem(element: Snipp | TerminalActionItem): vscode.TreeItem {
+    // Check if this is an action item
+    if ('command' in element && 'snipp' in element) {
+      const actionItem = element as TerminalActionItem;
+      const treeItem = new vscode.TreeItem(actionItem.label);
+      treeItem.command = {
+        command: actionItem.command,
+        title: actionItem.label,
+        arguments: [actionItem.snipp]
+      };
+      treeItem.iconPath = new vscode.ThemeIcon(actionItem.icon);
+      treeItem.tooltip = `Click to ${actionItem.label.toLowerCase()}`;
+      treeItem.contextValue = "terminalActionItem";
+      return treeItem;
+    }
 
-    const snippcomm = {
-      command: "terminalSnipps.insertEntry",
-      title: "",
-      arguments: [element],
-    };
+    // Handle regular terminal snippet
+    const snipp = element as Snipp;
+    
+    // Create tooltip with snippet content preview
+    let tooltipContent = `**${snipp.name}** - Terminal Command\n\n`;
+    
+    if (snipp.content) {
+      tooltipContent += `**Command:**\n\`\`\`bash\n${snipp.content}\n\`\`\`\n\n`;
+    } else {
+      tooltipContent += `**Command:** No content available\n\n`;
+    }
+    
+    tooltipContent += `*Expand to see action buttons*`;
 
-    return {
-      label: element.name,
-      command: snippcomm,
-    };
+    // Create tree item with expandable actions
+    const treeItem = new vscode.TreeItem(
+      snipp.name || 'Unnamed Command', 
+      vscode.TreeItemCollapsibleState.Collapsed
+    );
+    
+    treeItem.iconPath = new vscode.ThemeIcon("terminal");
+    treeItem.tooltip = new vscode.MarkdownString(tooltipContent);
+    treeItem.contextValue = "terminalSnipp";
+
+    return treeItem;
   }
 
-  public getChildren(element?: Snipp): Snipp[] | Thenable<Snipp[]> {
-    return this.model.roots;
+  public getChildren(element?: Snipp | TerminalActionItem): (Snipp | TerminalActionItem)[] | Thenable<(Snipp | TerminalActionItem)[]> {
+    if (!element) {
+      // Return root level terminal snippets
+      return this.model.roots;
+    }
+    
+    // If element is a terminal snippet, return its action items
+    if ('content' in element && !('snipp' in element)) {
+      const snipp = element as Snipp;
+      const actions: TerminalActionItem[] = [
+        {
+          label: "Run",
+          command: "terminalSnipps.insertEntry",
+          icon: "play",
+          snipp: snipp
+        },
+        {
+          label: "Edit",
+          command: "terminalSnipps.editEntry",
+          icon: "edit", 
+          snipp: snipp
+        },
+        {
+          label: "Delete",
+          command: "terminalSnipps.deleteEntry",
+          icon: "trash",
+          snipp: snipp
+        }
+      ];
+      return Promise.resolve(actions);
+    }
+    
+    // Action items have no children
+    return Promise.resolve([]);
   }
 
   public provideTextDocumentContent(

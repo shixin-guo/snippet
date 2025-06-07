@@ -3,6 +3,13 @@ import { join as pathJoin } from "path";
 import Snipp from "../interfaces/snipp";
 import editSnippWebviewContent from "../components/edit_snipp";
 
+export interface EditorActionItem {
+  label: string;
+  command: string;
+  icon: string;
+  snipp: Snipp;
+}
+
 /**
  * Group interface
  */
@@ -45,7 +52,7 @@ export class GroupModel {}
 
 export class SnippProvider
   implements
-    vscode.TreeDataProvider<Snipp | Group>,
+    vscode.TreeDataProvider<Snipp | Group | EditorActionItem>,
     vscode.TextDocumentContentProvider
 {
   private _onDidChangeTreeData: vscode.EventEmitter<any> =
@@ -66,60 +73,128 @@ export class SnippProvider
     return "content" in object;
   }
 
-  public getTreeItem(element: Snipp | Group): vscode.TreeItem {
-    const t = element.name;
-    let icn = pathJoin(
-      __filename,
-      "..",
-      "..",
-      "..",
-      "resources",
-      "icons",
-      `folder-${t}.svg`
-    );
-    const isSnip = this.isSnipp(element);
-    if (isSnip) {
-      const it = element.contentType;
-      icn = pathJoin(
+  public getTreeItem(element: Snipp | Group | EditorActionItem): vscode.TreeItem {
+    // Check if this is an action item
+    if ('command' in element && 'snipp' in element) {
+      const actionItem = element as EditorActionItem;
+      const treeItem = new vscode.TreeItem(actionItem.label);
+      treeItem.command = {
+        command: actionItem.command,
+        title: actionItem.label,
+        arguments: [actionItem.snipp]
+      };
+      treeItem.iconPath = new vscode.ThemeIcon(actionItem.icon);
+      treeItem.tooltip = `Click to ${actionItem.label.toLowerCase()}`;
+      treeItem.contextValue = "editorActionItem";
+      return treeItem;
+    }
+
+    // Handle Group
+    if ('contentType' in element && element.contentType === undefined) {
+      const group = element as Group;
+      let icn = pathJoin(
         __filename,
         "..",
         "..",
         "..",
         "resources",
         "icons",
-        `${it}.svg`
+        `folder-${group.name}.svg`
       );
+
+      return {
+        label: group.name.toUpperCase(),
+        iconPath: icn,
+        collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+        contextValue: "snippGroup"
+      };
     }
 
-    const snippcomm = {
-      command: "allSnipps.insertEntry",
-      title: "",
-      arguments: [element],
-    };
+    // Handle Snipp
+    const snipp = element as Snipp;
+    const isSnip = this.isSnipp(element);
+    
+    if (isSnip) {
+      // Create tooltip with snippet content preview
+      let snippetInfo: string = `**${snipp.name}⇥ ${snipp.contentType}** _\n___`;
+      let tooltipContent = new vscode.MarkdownString(
+        `${snippetInfo}\n\n\`\`\`${snipp.contentType}\n${snipp.content}\n\`\`\``
+      );
+      tooltipContent.appendMarkdown(`\n\n*Expand to see action buttons*`);
 
-    let snippetInfo: string = `**${element.name}⇥ ${element.contentType}** _\n___`;
+      let icn = pathJoin(
+        __filename,
+        "..",
+        "..",
+        "..",
+        "resources",
+        "icons",
+        `${snipp.contentType}.svg`
+      );
 
-    return {
-      // @ts-ignore
-      label: isSnip ? element.name : element.name.toUpperCase(),
-      iconPath: icn,
-      command: isSnip ? snippcomm : undefined,
-      tooltip: isSnip
-        ? new vscode.MarkdownString(
-            // @ts-ignore
-            `${snippetInfo}\n\n\`\`\`${element.contentType}\n${element.content}\n\`\`\``
-          )
-        : undefined,
-      collapsibleState: !isSnip
-        ? vscode.TreeItemCollapsibleState.Collapsed
-        : undefined,
-    };
+      // Create tree item with expandable actions
+      const treeItem = new vscode.TreeItem(
+        snipp.name, 
+        vscode.TreeItemCollapsibleState.Collapsed
+      );
+      
+      treeItem.iconPath = icn;
+      treeItem.tooltip = tooltipContent;
+      treeItem.contextValue = "editorSnipp";
+
+      return treeItem;
+    }
+
+    // Fallback
+    return new vscode.TreeItem("Unknown Item");
   }
 
   public getChildren(
-    element?: Snipp | Group
-  ): Snipp[] | Thenable<Snipp[]> | Group[] | Thenable<Group[]> {
-    return element ? this.model.getChildren(element) : this.model.roots;
+    element?: Snipp | Group | EditorActionItem
+  ): (Snipp | Group | EditorActionItem)[] | Thenable<(Snipp | Group | EditorActionItem)[]> {
+    if (!element) {
+      // Return root level groups
+      return this.model.roots;
+    }
+    
+    // If element is an action item, no children
+    if ('command' in element && 'snipp' in element) {
+      return Promise.resolve([]);
+    }
+    
+    // If element is a snippet, return its action items
+    if ('content' in element && 'contentType' in element && element.contentType !== undefined) {
+      const snipp = element as Snipp;
+      const actions: EditorActionItem[] = [
+        {
+          label: "Insert",
+          command: "allSnipps.insertEntry",
+          icon: "insert",
+          snipp: snipp
+        },
+        {
+          label: "Edit",
+          command: "allSnipps.editEntry",
+          icon: "edit", 
+          snipp: snipp
+        },
+        {
+          label: "Delete",
+          command: "allSnipps.deleteEntry",
+          icon: "trash",
+          snipp: snipp
+        }
+      ];
+      return Promise.resolve(actions);
+    }
+    
+    // If element is a group, return its snippets
+    if ('contentType' in element && element.contentType === undefined) {
+      const group = element as Group;
+      return this.model.getChildren(group);
+    }
+    
+    return Promise.resolve([]);
   }
 
   public provideTextDocumentContent(

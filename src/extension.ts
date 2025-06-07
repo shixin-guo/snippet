@@ -1,10 +1,9 @@
 import {
-  ExtensionContext,
+  type ExtensionContext,
   commands,
   workspace,
   window,
-  OpenDialogOptions,
-  TextDocumentContentProvider,
+  type OpenDialogOptions,
   Uri,
 } from "vscode";
 import { AddSnippForm } from "./components/add_snipp";
@@ -14,15 +13,16 @@ import { SearchSnippForm } from "./components/search_snipps";
 import { SearchTerminalSnippsForm } from "./components/search_terminal_snipps";
 
 import { TerminalSnippExplorer } from "./providers/TerminalSnippProvider";
+import { BashShellExplorer } from "./providers/BashShellProvider";
 import { AddTerminalSnippetForm } from "./components/add_terminal_snipp";
 import SnippetExportProvider from "./providers/SnippExportProvider";
-import Snipp from "./interfaces/snipp";
-import { isDate } from "util";
+import type Snipp from "./interfaces/snipp";
 
 export function activate(context: ExtensionContext) {
   new SnippExplorer(context);
   new CompletionProvider(context);
   new TerminalSnippExplorer(context);
+  new BashShellExplorer(context);
 
   context.subscriptions.push(
     commands.registerCommand("extension.createSnipp", async () => {
@@ -105,7 +105,7 @@ export function activate(context: ExtensionContext) {
             // Run function
             context.globalState.update("snipps", []);
             commands.executeCommand("allSnipps.refreshEntry");
-            window.showInformationMessage(`Successfully removed all snippets`);
+            window.showInformationMessage("Successfully removed all snippets");
           }
         });
     })

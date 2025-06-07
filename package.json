@@ -48,6 +48,7 @@
     "onCommand:extension.deleteEntry",
     "onCommand:extension.insertEntry",
     "onView:allSnipps",
+    "onView:bashShells",
     "snippet.snippetEdit"
   ],
   "main": "./out/extension.js",
@@ -56,11 +57,15 @@
       "snippView": [
         {
           "id": "allSnipps",
-          "name": "Editor"
+          "name": "Code Snippets"
         },
         {
           "id": "terminalSnipps",
-          "name": "Terminal"
+          "name": "Terminal Commands"
+        },
+        {
+          "id": "bashShells",
+          "name": "Shell Scripts"
         }
       ]
     },
@@ -113,6 +118,26 @@
           "command": "terminalSnipps.editEntry",
           "group": "snippet",
           "when": "view == terminalSnipps"
+        },
+        {
+          "command": "bashShells.previewEntry",
+          "group": "actions@1",
+          "when": "view == bashShells && viewItem == shellScript"
+        },
+        {
+          "command": "bashShells.runEntry",
+          "group": "actions@2", 
+          "when": "view == bashShells && viewItem == shellScript"
+        },
+        {
+          "command": "bashShells.editEntry",
+          "group": "actions@3",
+          "when": "view == bashShells && viewItem == shellScript"
+        },
+        {
+          "command": "bashShells.deleteEntry",
+          "group": "actions@4",
+          "when": "view == bashShells && viewItem == shellScript"
         }
       ],
       "view/title": [
@@ -140,6 +165,35 @@
           "command": "terminalSnipps.searchSnipps",
           "group": "navigation",
           "when": "view == terminalSnipps"
+        },
+        {
+          "command": "bashShells.createEntry",
+          "group": "navigation",
+          "when": "view == bashShells"
+        },
+        {
+          "command": "bashShells.addEntry",
+          "group": "navigation",
+          "when": "view == bashShells"
+        }
+      ],
+
+      "view/item/inline": [
+        {
+          "command": "bashShells.previewEntry",
+          "when": "view == bashShells && viewItem == shellScript"
+        },
+        {
+          "command": "bashShells.runEntry",
+          "when": "view == bashShells && viewItem == shellScript"
+        },
+        {
+          "command": "bashShells.editEntry",
+          "when": "view == bashShells && viewItem == shellScript"
+        },
+        {
+          "command": "bashShells.deleteEntry",
+          "when": "view == bashShells && viewItem == shellScript"
         }
       ]
     },
@@ -250,6 +304,46 @@
       {
         "command": "terminalSnipps.insertEntry",
         "title": "Insert"
+      },
+      {
+        "command": "bashShells.createEntry",
+        "title": "Create New Script",
+        "icon": {
+          "light": "resources/icons/add-icon.svg",
+          "dark": "resources/icons/add-icon.svg"
+        }
+      },
+      {
+        "command": "bashShells.addEntry",
+        "title": "Add from File",
+        "icon": {
+          "light": "resources/icons/import-snipps.svg",
+          "dark": "resources/icons/import-snipps.svg"
+        }
+      },
+      {
+        "command": "bashShells.executeEntry",
+        "title": "Execute"
+      },
+      {
+        "command": "bashShells.runEntry",
+        "title": "Run",
+        "icon": "$(play)"
+      },
+      {
+        "command": "bashShells.previewEntry",
+        "title": "Preview",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "bashShells.editEntry",
+        "title": "Edit",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "bashShells.deleteEntry",
+        "title": "Delete",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {

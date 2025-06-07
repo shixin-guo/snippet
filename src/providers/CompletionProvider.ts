@@ -1,11 +1,11 @@
 import {
   languages,
-  TextDocument,
-  Position,
-  CancellationToken,
-  CompletionContext,
+  type TextDocument,
+  type Position,
+  type CancellationToken,
+  type CompletionContext,
   CompletionItem,
-  ExtensionContext
+  type ExtensionContext
 } from "vscode";
 import Snipp from "../interfaces/snipp";
 
